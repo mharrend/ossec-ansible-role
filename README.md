@@ -1,7 +1,7 @@
 # Ansible role to deploy OSSEC on servers (manager) and clients (agents)
 
 ## Motivation 
-* [OSSEC](http://ossec.github.io/) is a must-have on a web server and other machines in a DMZ connected to the Internet since it provides a host-based intrusion detection system.
+* [OSSEC](http://ossec.github.io/) is a must-have on a web server and other machines connected to the Internet since it provides a host-based intrusion detection system.
 * [Ansible](https://www.ansible.com/)  is a fantastic tool to automate the deployment of software to different machines
 * I needed an easy and automatized way to deploy OSSEC to different machines while giving them some default configuration and still having the possibility to adjust the OSSEC configuration.
 
