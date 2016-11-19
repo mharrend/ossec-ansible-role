@@ -17,10 +17,12 @@
 2. Open the ossec.yml file and in the following section
 	```
 	authorized: [NameOfServer]
-	``` 	change `NameOfServer` to the DNS name of your manager machine, e.g. ossecserver.myorganization.net
-1. Open the file `roles/ossec/tasks/main.yml` and replace all occurrences of `NameOfServer`with the name of your manager machine as before.
-	* Note: If your manager machine is not using eth0 as its default ethernet port, you have to replace eth0 also by the proper interface name.
-	* Note: Probably, one could define the manager DNS name once in Ansible, so that one would not have to replace the manager DNS name a few times. If someone knows how to do that I would be glad to get a PR.
+	``` 	
+	change `NameOfServer` to the DNS name of your manager machine, e.g. ossecserver.myorganization.net
+1. Open the file `roles/ossec/tasks/main.yml` and replace all occurrences of `NameOfServer` with the name of your manager machine as before.
+  * Note: If your manager machine is not using eth0 as its default ethernet port, you have to replace eth0 also by the proper interface name.
+  * Note: Probably, one could define the manager DNS name once in Ansible, so that one would not have to replace the manager DNS name a few times. If someone knows how to do that I would be glad to get a PR.
+
 1. If you would like to change the OSSEC default config or to add agent-specific rules, checkout the file `roles/ossec/files/agent.conf` and have a look at the [dedicated manual page](http://ossec.github.io/docs/manual/agent/agent-configuration.html) for further information about configuration options.
 
 ## Note on additional copyright / licences
