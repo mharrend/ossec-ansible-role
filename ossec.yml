@@ -1,0 +1,9 @@
+---
+
+- hosts: ossec
+  remote_user: root
+  vars:
+    authorized: [NameOfServer]
+    ssh_allow_password_authentication: true
+  roles:
+    - role: ossec

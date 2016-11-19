@@ -1,0 +1,10 @@
+
+
+---
+
+- name: Add APT repository for OSSEC client
+  apt_repository: repo='deb http://ossec.wazuh.com/repos/apt/ubuntu {{ ansible_distribution_release }} main' state=present update_cache=yes
+
+- name: Install OSSEC client
+  apt: name=ossec-hids-agent state=present allow_unauthenticated=yes
+

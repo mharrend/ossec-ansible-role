@@ -1,0 +1,83 @@
+---
+
+- name: Add APT repository for OSSEC 
+  apt_repository: repo='deb http://ossec.wazuh.com/repos/apt/ubuntu {{ ansible_distribution_release }} main' state=present update_cache=yes
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: Copy customized yum config to client since atomic repository script is requiring user input
+  copy: src=ossec-yum-repository dest=/root/ossec-yum-repository force=yes
+  when: ansible_distribution == 'Scientific' or ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+- name: Add YUM repository for OSSEC if CentOS or RedHat is used
+  shell: cat /root/ossec-yum-repository |sh
+  when: ansible_distribution == 'Scientific' or ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+- name: Install OSSEC server on NameOfServer
+  apt: name=ossec-hids state=present allow_unauthenticated=yes
+  when: inventory_hostname == "NameOfServer"
+
+- name: Check if ssl server private key on NameOfServer is present, needed to communicate with agents
+  stat: path=/var/ossec/etc/sslmanager.key
+  register: serverkey
+  when: inventory_hostname == "NameOfServer" 
+
+- name: Create ssl server private key to have a secure communication between server and agent
+  command: openssl genrsa -out /var/ossec/etc/sslmanager.key 2048
+  ignore_errors: False
+  when: inventory_hostname == "NameOfServer" and (not serverkey.stat.exists) 
+
+- name: Check if ssl certificate on NameOfServer is present, needed to communicate with agents
+  stat: path=/var/ossec/etc/sslmanager.cert
+  register: servercert
+  when: inventory_hostname == "NameOfServer"
+
+- name: Create ssl server certificate to have a secure communication between server and agent
+  command: openssl req -new -x509 -subj "/C=DE/ST=BadenWuerttemberg/L=Karlsruhe/O=NoneDefined/ON=/CN=NameOfServer" -key /var/ossec/etc/sslmanager.key -out /var/ossec/etc/sslmanager.cert -days 720
+  ignore_errors: False
+  when: inventory_hostname == "NameOfServer" and (not servercert.stat.exists) 
+
+- name: Install agent.conf to manager server which will be provided to agent clients when ossec is restarted.
+  copy: src=agent.conf dest=/var/ossec/etc/shared/agent.conf force=yes
+  when: inventory_hostname == "NameOfServer"
+
+- name: Restart ossec manager on server to propagate client config to agents
+  service: name=ossec state=restarted
+  when: inventory_hostname == "NameOfServer"
+
+- name: Install daemon program needed later
+  apt: name=daemon state=present
+  when: inventory_hostname == "NameOfServer"
+
+- name: Start daemon to add a key automatically to an agent
+  command: daemon -- /var/ossec/bin/ossec-authd -p 1515
+  when: inventory_hostname == "NameOfServer"
+
+- name: Install OSSEC client on agents using apt
+  apt: name=ossec-hids-agent state=present allow_unauthenticated=yes
+  when: inventory_hostname != "NameOfServer" and (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+
+- name: Install OSSEC client on agents using yum, part 1
+  yum: name=ossec-hids state=present update_cache=yes
+  when: inventory_hostname != "NameOfServer" and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'Scientific')
+
+- name: Install OSSEC client on agents using yum, part 2
+  yum: name=ossec-hids-client state=present
+  when: inventory_hostname != "NameOfServer" and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'Scientific')
+
+- name: Check if client agent is already register to server manager
+  stat: path=/var/ossec/etc/client.keys
+  register: clientkey
+  when: inventory_hostname != "NameOfServer"
+
+- name: Change default ossec.conf of agent since otherwise server manager is not found
+  lineinfile: dest=/var/ossec/etc/ossec.conf regexp='.<server-ip>'  line='    <server-ip>{{ hostvars['NameOfServer']['ansible_eth0']['ipv4']['address'] }}</server-ip>'  state=present
+  when: inventory_hostname != "NameOfServer" and (not clientkey.stat.exists)
+
+- name: Add OSSEC client of agent to server manager by getting a agent key automatically
+  command: /var/ossec/bin/agent-auth -m {{ hostvars['NameOfServer']['ansible_eth0']['ipv4']['address'] }}  -p 1515
+  when: inventory_hostname != "NameOfServer" and (not clientkey.stat.exists)
+
+- name: Start OSSEC client of agent after agent key was transmitted
+  command: /var/ossec/bin/ossec-control restart
+  when: inventory_hostname != "NameOfServer" and (not clientkey.stat.exists)
+
